@@ -10,6 +10,57 @@ import "core:strings"
 import "core:fmt"
 import os "core:os/os2"
 
+HorizontalAlignment :: enum {
+	Left,
+	Center,
+	Right,
+}
+
+VerticalAlignment :: enum {
+	Top,
+	Center,
+	Bottom,
+}
+
+TextAlignment :: struct {
+	horziontal: HorizontalAlignment,
+	vertical: VerticalAlignment,
+}
+
+Centered := TextAlignment {.Center, .Center}
+
+draw_text_aligned :: proc(text: string, position: rl.Vector2, alignment: TextAlignment, color: rl.Color, font: rl.Font, font_size: f32) {
+	if text != "" {
+		c_text := strings.clone_to_cstring(text, gui_state.temp_allocator)
+
+		font := rl.GetFontDefault()
+		text_size := rl.MeasureTextEx(font, c_text, f32(font.baseSize), f32(font.glyphPadding + 1) /*ough*/)
+
+		offset: rl.Vector2
+		switch alignment.horziontal {
+			case .Left:
+				offset.x = 0
+			case .Center:
+				offset.x = -(text_size.x / 2)
+			case .Right:
+				offset.x = -text_size.x
+		}
+
+		switch alignment.vertical {
+			case .Top:
+				offset.y = 0
+			case .Center:
+				offset.y = -(text_size.y / 2)
+			case .Bottom:
+				offset.y = -text_size.y
+		}
+
+		text_position := position + offset 
+
+		rl.DrawTextEx(font, c_text, text_position, f32(font.baseSize) * 1.001 /*ugh*/, f32(font.glyphPadding + 1) /*UGH*/, color)
+	}
+}
+
 ElementState :: enum {
 	None = 0, // Check if not zero to see if button is pressed
 	Hover,
@@ -144,16 +195,7 @@ button :: proc(rectangle: rl.Rectangle, down: ^bool, text: string = "") -> (elem
 	rl.DrawRectangleRec(rectangle, colors.fill_color)
 	rl.DrawRectangleLinesEx(rectangle, gui_state.theme.line_thickness, colors.outline_color)
 
-	if text != "" {
-		c_text := strings.clone_to_cstring(text, gui_state.temp_allocator)
-
-		font := rl.GetFontDefault()
-		text_size := rl.MeasureTextEx(font, c_text, f32(font.baseSize), f32(font.glyphPadding + 1) /*ough*/)
-
-		text_position := rl.Vector2 {rectangle.x, rectangle.y} + {rectangle.width / 2, rectangle.height / 2} - (text_size / 2)
-
-		rl.DrawTextEx(font, c_text, text_position, f32(font.baseSize) * 1.001 /*ugh*/, f32(font.glyphPadding + 1) /*UGH*/, colors.text_color)
-	}
+	draw_text_aligned(text, {rectangle.x, rectangle.y} + ({rectangle.width, rectangle.height} / 2), Centered, colors.text_color, rl.GetFontDefault(), f32(rl.GetFontDefault().baseSize))
 
 	return
 }
