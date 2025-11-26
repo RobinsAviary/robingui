@@ -200,6 +200,26 @@ button :: proc(rectangle: rl.Rectangle, down: ^bool, text: string = "") -> (elem
 	return
 }
 
+toggle :: proc(rectangle: rl.Rectangle, value: ^bool, text: string = "") -> (element_state: ElementState) {
+	element_state = get_state_from_rectangle(rectangle)
+
+	if element_state == .Pressed {
+		value^ = !value^
+	}
+
+	colors: ElementStateColors
+
+	if value^ && element_state != .Hover do colors = gui_state.theme.colors.down
+	else do colors = get_colors_from_state(element_state)
+
+	rl.DrawRectangleRec(rectangle, colors.fill_color)
+	rl.DrawRectangleLinesEx(rectangle, gui_state.theme.line_thickness, colors.outline_color)
+
+	draw_text_aligned(text, {rectangle.x, rectangle.y} + ({rectangle.width, rectangle.height} / 2), Centered, colors.text_color, rl.GetFontDefault(), f32(rl.GetFontDefault().baseSize))
+	
+	return
+}
+
 end_gui :: proc() {
 	// Deallocate everything in the arena
 	free_all(gui_state.temp_allocator)
