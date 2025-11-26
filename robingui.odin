@@ -220,6 +220,16 @@ toggle :: proc(rectangle: rl.Rectangle, value: ^bool, text: string = "") -> (ele
 	return
 }
 
+label :: proc(rectangle: rl.Rectangle, text: string = "") -> (element_state: ElementState) {
+	element_state = get_state_from_rectangle(rectangle)
+
+	colors := gui_state.theme.colors.none
+
+	draw_text_aligned(text, {rectangle.x, rectangle.y} + ({rectangle.width, rectangle.height} / 2), Centered, colors.text_color, rl.GetFontDefault(), f32(rl.GetFontDefault().baseSize))
+
+	return
+}
+
 end_gui :: proc() {
 	// Deallocate everything in the arena
 	free_all(gui_state.temp_allocator)
