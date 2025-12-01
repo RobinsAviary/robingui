@@ -10,26 +10,26 @@ import "core:strings"
 import "core:fmt"
 import os "core:os/os2"
 
-HorizontalAlignment :: enum {
+Horizontal_Alignment :: enum {
 	Left,
 	Center,
 	Right,
 }
 
-VerticalAlignment :: enum {
+Vertical_Alignment :: enum {
 	Top,
 	Center,
 	Bottom,
 }
 
-TextAlignment :: struct {
-	horziontal: HorizontalAlignment,
-	vertical: VerticalAlignment,
+Text_Alignment :: struct {
+	horziontal: Horizontal_Alignment,
+	vertical: Vertical_Alignment,
 }
 
-Centered := TextAlignment {.Center, .Center}
+Centered := Text_Alignment {.Center, .Center}
 
-draw_text_aligned :: proc(text: string, position: rl.Vector2, alignment: TextAlignment, color: rl.Color, font: rl.Font, font_size: f32) {
+draw_text_aligned :: proc(text: string, position: rl.Vector2, alignment: Text_Alignment, color: rl.Color, font: rl.Font, font_size: f32) {
 	if text != "" {
 		c_text := strings.clone_to_cstring(text, gui_state.temp_allocator)
 
@@ -61,7 +61,7 @@ draw_text_aligned :: proc(text: string, position: rl.Vector2, alignment: TextAli
 	}
 }
 
-ElementState :: enum {
+Element_State :: enum {
 	None = 0, // Check if not zero to see if button is pressed
 	Hover,
 	Pressed,
@@ -69,20 +69,20 @@ ElementState :: enum {
 	Released,
 }
 
-ElementStateColors :: struct {
+Element_State_Colors :: struct {
 	fill_color: rl.Color,
 	outline_color: rl.Color,
 	text_color: rl.Color,
 }
 
-ThemeColors :: struct {
-	none: ElementStateColors,
-	hover: ElementStateColors,
-	down: ElementStateColors,
+Theme_Colors :: struct {
+	none: Element_State_Colors,
+	hover: Element_State_Colors,
+	down: Element_State_Colors,
 }
 
 Theme :: struct {
-	colors: ThemeColors,
+	colors: Theme_Colors,
 	line_thickness: f32,
 	font: rl.Font
 }
@@ -116,7 +116,7 @@ init :: proc "contextless" () {
 	// Get the allocator for our arena
 	allocator := virtual.arena_allocator(&gui_state.temp_arena)
 
-	theme_colors := ThemeColors {
+	theme_colors := Theme_Colors {
 		none = {
 			{201, 201, 201, 255}, {131, 131, 131, 255}, {104, 104, 104, 255},
 		},
@@ -149,7 +149,7 @@ fini :: proc "contextless" () {
 }
 
 @(private)
-get_state_from_rectangle :: proc(rectangle: rl.Rectangle, button: rl.MouseButton = .LEFT) -> (element_state: ElementState) {
+get_state_from_rectangle :: proc(rectangle: rl.Rectangle, button: rl.MouseButton = .LEFT) -> (element_state: Element_State) {
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), rectangle) {
 		if rl.IsMouseButtonPressed(button) do return .Pressed
 		else if rl.IsMouseButtonReleased(button) do return .Released
@@ -161,7 +161,7 @@ get_state_from_rectangle :: proc(rectangle: rl.Rectangle, button: rl.MouseButton
 }
 
 @(private)
-get_colors_from_state :: proc(element_state: ElementState) -> (colors: ElementStateColors) {
+get_colors_from_state :: proc(element_state: Element_State) -> (colors: Element_State_Colors) {
 	// This is the most efficient way I could figure out how to do this
 	#partial switch element_state {
 		case .Released:
@@ -185,7 +185,7 @@ get_theme :: proc() -> (theme: Theme) {
 	return gui_state.theme
 }
 
-button :: proc(rectangle: rl.Rectangle, down: ^bool, text: string = "") -> (element_state: ElementState) {
+button :: proc(rectangle: rl.Rectangle, down: ^bool, text: string = "") -> (element_state: Element_State) {
 	element_state = get_state_from_rectangle(rectangle)
 
 	if element_state == .Pressed || element_state == .Down do down^ = true
@@ -200,14 +200,14 @@ button :: proc(rectangle: rl.Rectangle, down: ^bool, text: string = "") -> (elem
 	return
 }
 
-toggle :: proc(rectangle: rl.Rectangle, value: ^bool, text: string = "") -> (element_state: ElementState) {
+toggle :: proc(rectangle: rl.Rectangle, value: ^bool, text: string = "") -> (element_state: Element_State) {
 	element_state = get_state_from_rectangle(rectangle)
 
 	if element_state == .Pressed {
 		value^ = !value^
 	}
 
-	colors: ElementStateColors
+	colors: Element_State_Colors
 
 	if value^ && element_state != .Hover do colors = gui_state.theme.colors.down
 	else do colors = get_colors_from_state(element_state)
@@ -220,7 +220,7 @@ toggle :: proc(rectangle: rl.Rectangle, value: ^bool, text: string = "") -> (ele
 	return
 }
 
-label :: proc(rectangle: rl.Rectangle, text: string = "") -> (element_state: ElementState) {
+label :: proc(rectangle: rl.Rectangle, text: string = "") -> (element_state: Element_State) {
 	element_state = get_state_from_rectangle(rectangle)
 
 	colors := gui_state.theme.colors.none
@@ -233,4 +233,28 @@ label :: proc(rectangle: rl.Rectangle, text: string = "") -> (element_state: Ele
 end_gui :: proc() {
 	// Deallocate everything in the arena
 	free_all(gui_state.temp_allocator)
+}
+
+Divider_Type :: enum {
+	Horizontal,
+	Vertical,
+}
+
+divider :: proc(rectangle: rl.Rectangle, type := Divider_Type.Horizontal) -> (element_state: Element_State) {
+	element_state = get_state_from_rectangle(rectangle)
+
+	color := gui_state.theme.colors.none.outline_color
+
+	switch type {
+		case .Horizontal:
+			y := rectangle.y + (rectangle.height / 2)
+
+			rl.DrawLineV({rectangle.x, y}, {rectangle.x + rectangle.width, y}, color)
+		case .Vertical:
+			x := rectangle.x + (rectangle.width / 2)
+
+			rl.DrawLineV({x, rectangle.y}, {x, rectangle.y + rectangle.height}, color)
+	}
+
+	return
 }
